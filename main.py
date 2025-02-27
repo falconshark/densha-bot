@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from telegram import Update
@@ -11,6 +12,15 @@ telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
 api_url = os.getenv('API_URL')
 
 print('Telegram ロボットが現在実行中です。')
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+
+def error(update, context):
+    """Log Errors caused by Updates."""
+    logger.warning('Update "%s" caused error "%s"', update, context.error)
+    dispatcher.add_error_handler(error)
 
 #Show route status by input route name.
 async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -27,25 +37,25 @@ async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         message = f'{route_name}は遅延しています'
         
     await update.message.reply_text(f'{message}')
+    
+async def loadDenshaJob(context: ContextTypes.DEFAULT_TYPE) -> None:
+    job = context.job
+    await context.bot.send_message(job.chat_id, text=f"Beep! {job.data} seconds are over!")
 
-#Register Chat ID   
-async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_input = update.message.text.split(' ')
-    if len(user_input) < 2:
-        await update.message.reply_text('ルート名を入力してください。')
-        return
-    route_name = user_input[1]
-    route_info = api.load_densha_info(api_url, route_name)
-    route_status = route_info['results'][0]['route_status']
-    if(route_status == '通常'):
-        message = f'{route_name}は通常運転です'
-    else:
-        message = f'{route_name}は遅延しています'
+async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_message.chat_id
+    try:
+        user_input = update.message.text.split(' ')
+        target_route = user_input[1]
+        context.job_queue.run_repeating(loadDenshaJob, 600, first=None, last=None, name=None, chat_id=chat_id, data=target_route)
+        await update.effective_message.reply_text(f'{target_route}の遲延状況を每10分ごとに通知します。')
         
-    await update.message.reply_text(f'{message}')
+    except (IndexError, ValueError):
+        await update.message.reply_text('ルート名を入力してください。')
 
 app = ApplicationBuilder().token(telegram_token).build()
 
-app.add_handler(CommandHandler("route", routeInfo))
+app.add_handler(CommandHandler('route', routeInfo))
+app.add_handler(CommandHandler('subscribe', subscribe))
 
 app.run_polling()
