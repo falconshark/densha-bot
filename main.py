@@ -49,7 +49,13 @@ async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
 async def loadDenshaJob(context: ContextTypes.DEFAULT_TYPE) -> None:
     job = context.job
-    await context.bot.send_message(job.chat_id, text=f"Beep! {job.data} seconds are over!")
+    route_name = job.data
+    route_info = api.load_densha_info(api_url, route_name)
+    route_status = route_info['results'][0]['route_status'][0]
+    route_message = route_info['results'][0]['route_message'][1]
+    
+    if(route_status != '通常'):
+        await context.bot.send_message(job.chat_id, text=f"{route_message}")
 
 async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.effective_message.chat_id
