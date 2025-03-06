@@ -30,11 +30,12 @@ async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     route_name = user_input[1]
     route_info = api.load_densha_info(api_url, route_name)
-    route_status = route_info['results'][0]['route_status']
+    route_status = route_info['results'][0]['route_status'][0]
+    route_message = route_info['results'][0]['route_status'][1]
     if(route_status == '通常'):
-        message = f'{route_name}は通常運転です'
+        message = f'{route_name}は通常運転です.'
     else:
-        message = f'{route_name}は遅延しています'
+        message = f'{route_message}'
         
     await update.message.reply_text(f'{message}')
     

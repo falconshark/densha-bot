@@ -28,6 +28,8 @@ def upgrade() -> None:
         'user_subscription',
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('related_user', sa.String(50), nullable=False),
+        sa.Column('target_route', sa.String(50), nullable=False),
+        sa.Column('last_message', sa.String(50), nullable=False),
         sa.Column('created_at', sa.DateTime, nullable=False),
     )
     pass
