@@ -1,15 +1,23 @@
 import os
 import logging
 from pathlib import Path
+import time
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import pymysql.cursors
 import lib.api as api
 
 dotenv_path = Path('./.env')
 load_dotenv(dotenv_path=dotenv_path)
 telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
 api_url = os.getenv('API_URL')
+
+connection = pymysql.connect(host=os.getenv('MYSQL_HOST'),
+                             user=os.getenv('MYSQL_USER'),
+                             password=os.getenv('MYSQL_PASSWORD'),
+                             database=os.getenv('MYSQL_DATABASE'),
+                             cursorclass=pymysql.cursors.DictCursor)
 
 print('Telegram ロボットが現在実行中です。')
 # Enable logging
@@ -48,7 +56,14 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         user_input = update.message.text.split(' ')
         target_route = user_input[1]
-        context.job_queue.run_repeating(loadDenshaJob, 600, first=None, last=None, name=None, chat_id=chat_id, data=target_route)
+        
+        # Save the subscription to the database
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO `user_subscription` (`related_user`, `target_route`, `created_at`) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (chat_id, target_route, time.time()))
+        connection.commit()    
+        
+        context.job_queue.run_repeating(loadDenshaJob, 600, first=None, last=None, name=None, chat_id=chat_id, data=target_route)    
         await update.effective_message.reply_text(f'{target_route}の遲延状況を每10分ごとに通知します。')
         
     except (IndexError, ValueError):
