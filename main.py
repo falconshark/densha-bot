@@ -39,7 +39,8 @@ def init(app):
         for row in result:
             chat_id = row['related_user']
             target_route = row['target_route']
-            app.job_queue.run_repeating(loadDenshaJob, 200, first=None, last=None, name=None, chat_id=chat_id, data=target_route)
+            job_name = f'{chat_id}_{target_route}'
+            app.job_queue.run_repeating(loadDenshaJob, 200, first=None, last=None, name=job_name, chat_id=chat_id, data=target_route)
     connection.commit()
 
 #Init Function
@@ -48,7 +49,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                     'このボットは、JR東日本の遅延情報を提供します。\n'
                                     '以下のコマンドを使用してください。\n'
                                     '/route [route_name] : ルートの遅延情報を表示します。\n'
-                                    '/subscribe [route_name] : ルートの遅延情報を監視し、遅延情報を通知します。')
+                                    '/subscribe [route_name] : ルートの遅延情報を監視し、遅延情報を通知します。\n'
+                                    '/unsubscribe [route_name] : ルートの遅延情報の監視を解除します。\n'
+                                    '/unsubscribe_all : 全てのルートの遅延情報の監視を解除します。\n')
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('このボットは、JR東日本の遅延情報を提供します。\n'
+                                    '以下のコマンドを使用してください。\n'
+                                    '/route [route_name] : ルートの遅延情報を表示します。\n'
+                                    '/subscribe [route_name] : ルートの遅延情報を監視し、遅延情報を通知します。\n'
+                                    '/unsubscribe [route_name] : ルートの遅延情報の監視を解除します。\n'
+                                    '/unsubscribe_all : 全てのルートの遅延情報の監視を解除します。\n')
 
 #Show route status by input route name.
 async def routeInfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -92,6 +103,7 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         user_input = update.message.text.split(' ')
         target_route = user_input[1]
+        job_name = f'{chat_id}_{target_route}'
         
         # Save the subscription to the database
         with connection.cursor() as cursor:
@@ -99,17 +111,69 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             cursor.execute(sql, (chat_id, target_route, time.time()))
         connection.commit()    
         
-        context.job_queue.run_repeating(loadDenshaJob, 200, first=None, last=None, name=None, chat_id=chat_id, data=target_route)    
+        context.job_queue.run_repeating(loadDenshaJob, 200, first=None, last=None, name=job_name, chat_id=chat_id, data=target_route)    
         await update.effective_message.reply_text(f'{target_route}の遲延状況を每10分ごとに監視します。')
         
     except (IndexError, ValueError):
         await update.message.reply_text('ルート名を入力してください。')
 
+async def unsubscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_message.chat_id
+    try:
+        user_input = update.message.text.split(' ')
+        target_route = user_input[1]
+        
+        # Remove the subscription to the database
+        with connection.cursor() as cursor:
+            sql = "DELETE FROM `user_subscription` WHERE related_user = %s and target_route = %s"
+            cursor.execute(sql, (chat_id, target_route))
+        connection.commit()
+        
+        job_name = f'{chat_id}_{target_route}'
+        current_jobs = context.job_queue.get_jobs_by_name(job_name)
+        
+        for job in current_jobs:
+            job.schedule_removal()
+    
+        await update.effective_message.reply_text(f'{target_route}の監視を解除しました。')
+        
+    except (IndexError, ValueError):
+        await update.message.reply_text('ルート名を入力してください。')
+        
+async def unsubscribe_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.effective_message.chat_id
+    try:
+
+        # Remove the subscription from the database
+        with connection.cursor() as cursor:
+            load_subscription_sql = "SELECT * FROM `user_subscription`"
+            cursor.execute(load_subscription_sql)
+            result = cursor.fetchall()
+            for row in result:
+                target_route = row['target_route']
+                job_name = f'{chat_id}_{target_route}'
+                delete_subscription_sql = "DELETE FROM `user_subscription` WHERE related_user = %s"
+                cursor.execute(delete_subscription_sql, (chat_id))
+                
+                # Remove all job from the job queue
+                job_name = f'{chat_id}_{target_route}'
+                current_jobs = context.job_queue.get_jobs_by_name(job_name)
+                for job in current_jobs:
+                    job.schedule_removal()
+        connection.commit()          
+        await update.effective_message.reply_text(f'全での監視を解除しました。')
+        
+    except (IndexError, ValueError):
+        await update.message.reply_text('ルート名を入力してください。')
+        
 app = ApplicationBuilder().token(telegram_token).build()
 
+app.add_handler(CommandHandler('help', help))
 app.add_handler(CommandHandler('start', start))
 app.add_handler(CommandHandler('route', routeInfo))
 app.add_handler(CommandHandler('subscribe', subscribe))
+app.add_handler(CommandHandler('unsubscribe', unsubscribe))
+app.add_handler(CommandHandler('unsubscribe_all', unsubscribe_all))
 
 init(app)
 
