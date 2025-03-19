@@ -7,7 +7,7 @@
 ## URL
 [https://t.me/desha_unko_bot](https://t.me/desha_unko_bot)
 
-## 設置
+## 設置手順(普通)
 1. 必要なパッケージをインストール：
 ```bash
 pip install -r requirements.txt
@@ -20,18 +20,12 @@ vi .env.example
 ```bash
 TELEGRAM_BOT_TOKEN=
 API_URL=http://127.0.0.1:8000
+MYSQL_HOST=db
+MYSQL_DATABASE=densha_bot
+MYSQL_USER=densha_bot
+MYSQL_PASSWORD=densha_bot
+MYSQL_PORT=3306
 ```
-
-3. alembic.ini.example ファイルのLine 66を編集し、設定を入力する：
-```bash
-cp alembic.ini.example alembic.ini
-vi alembic.ini
-```
-
-```ini
-sqlalchemy.url = mysql+pymysql://[sql_username]:[sql_password]@[sql_hostname]/[sql_database]
-```
-例：sqlalchemy.url = mysql+pymysql://root:password@localhost/densha_bot
 
 4. データベースを準備する：
 ```bash
@@ -41,6 +35,26 @@ alembic upgrade head
 ```bash
 python main.py
 ```
+
+## 設置手順(Docker)
+1. env.example ファイルを編集し、設定を入力する：
+```bash
+cp .env.example .env
+vi .env.example
+```
+```bash
+TELEGRAM_BOT_TOKEN=
+API_URL=http://127.0.0.1:8000
+MYSQL_HOST=db
+MYSQL_DATABASE=densha_bot
+MYSQL_USER=densha_bot
+MYSQL_PASSWORD=densha_bot
+MYSQL_PORT=3306
+```
+
+2. Docker-Compose を運行する：
+docker-compose up --build -d
+
 ## 使用方法
 以下のコマンドを使用してください。  
 
