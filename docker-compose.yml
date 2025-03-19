@@ -1,0 +1,40 @@
+services:
+  db:
+    image: mysql
+    restart: always
+    volumes:
+      - ./scripts:/docker-entrypoint-initdb.d/:rw
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: 'Asia/Tokyo'
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER} -p${MYSQL_PASSWORD}
+  api:
+    image: dollars0427/densha-bot-api
+    restart: always
+    links:
+      - "db:db"
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PORT: 3306
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: curl -f http://127.0.0.1:8000
+    depends_on:
+      db:
+        condition: service_healthy
+  bot:
+    build: .
+    restart: always
+    links:
+      - "db:db"
+      - "api:api"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_healthy
