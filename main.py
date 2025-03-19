@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-import time
+import datetime;
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -108,7 +108,7 @@ async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # Save the subscription to the database
         with connection.cursor() as cursor:
             sql = "INSERT INTO `user_subscription` (`related_user`, `target_route`, `created_at`) VALUES (%s, %s, %s)"
-            cursor.execute(sql, (chat_id, target_route, time.time()))
+            cursor.execute(sql, (chat_id, target_route, datetime.datetime.now()))
         connection.commit()    
         
         context.job_queue.run_repeating(loadDenshaJob, 200, first=None, last=None, name=job_name, chat_id=chat_id, data=target_route)    

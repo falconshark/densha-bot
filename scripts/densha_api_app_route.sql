@@ -4,8 +4,8 @@ SET foreign_key_checks = 0;
 SET sql_mode = 'NO_AUTO_VALUE_ON_ZERO';
 SET NAMES utf8mb4;
 
-CREATE DATABASE IF NOT EXISTS densha_bot_api;
-USE densha_bot_api;
+CREATE DATABASE IF NOT EXISTS densha_bot;
+USE densha_bot;
 
 DROP TABLE IF EXISTS `densha_api_app_route`;
 CREATE TABLE `densha_api_app_route` (

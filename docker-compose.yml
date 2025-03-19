@@ -23,7 +23,7 @@ services:
     ports:
       - "8000:8000"
     healthcheck:
-      test: curl -f http://127.0.0.1:8000
+      test: curl -f http://127.0.0.1:8000/densha/routes
     depends_on:
       db:
         condition: service_healthy

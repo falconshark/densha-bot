@@ -1,9 +1,12 @@
 from logging.config import fileConfig
-
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+
+import os
+from pathlib import Path
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -11,8 +14,19 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+dotenv_path = Path('./.env')
+load_dotenv(dotenv_path=dotenv_path)
+SQL_HOST = os.getenv('MYSQL_HOST')
+SQL_USER = os.getenv('MYSQL_USER')
+SQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
+SQL_DATABASE = os.getenv('MYSQL_DATABASE')
+
+sql_alchemy_url = f"mysql+pymysql://{SQL_USER}:{SQL_PASSWORD}@{SQL_HOST}/{SQL_DATABASE}"
+config.set_section_option("alembic", "sqlalchemy.url", sql_alchemy_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

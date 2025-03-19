@@ -20,20 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     op.create_table(
-        'user',
-        sa.Column('chat_id', sa.String(50), nullable=False, primary_key=True),
-        sa.Column('created_at', sa.DateTime, nullable=False),
-    )
-    op.create_table(
         'user_subscription',
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('related_user', sa.String(50), nullable=False),
         sa.Column('target_route', sa.String(50), nullable=False),
-        sa.Column('last_message', sa.String(255), nullable=False),
+        sa.Column('last_message', sa.String(255), nullable=True),
         sa.Column('created_at', sa.DateTime, nullable=False),
     )
     pass
 
 def downgrade() -> None:
-    op.drop_table('user')
+    op.drop_table('user_subscription')
     pass
